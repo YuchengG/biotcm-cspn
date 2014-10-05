@@ -8,7 +8,7 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
   # Version
   VERSION = "0.0.1"
   # Permutation times
-  PERMUTATION = 100
+  PERMUTATION = 1000
   # Exchange times
   EXCHANGE = 100000
   # Alpha level
@@ -28,8 +28,7 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
     options = {
       mode:'or',
       ppi:path_to('ref/ppi/combined.txt'),
-      pathway_list:path_to('ref/pathway/all.txt'),
-      # TODO: pathway_list:path_to('ref/pathway/default.txt'),
+      pathway_list:path_to('ref/pathway/default.txt'),
     }
     OptionParser.new do |opts|
       opts.banner = "Usage: biotcm cspn [OPTIONS]"
