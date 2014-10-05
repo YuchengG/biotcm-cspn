@@ -3,47 +3,25 @@ biotcm-cspn
 
 A method to build pathway interaction network.
 
-## Environment requirements
 
-1. Linux/Unix OS, Windows OS
-2. Ruby
-3. R
+## Installation
 
-## Inputs
+Install biotcm-cspn gem simply by
 
-1. a list of interested genes
+    gem install biotcm-cspn
 
-2. PPI network [Symbol	Symbol]
-
-3. concerned pathway list [KEGG pathway ids]
-
-## Steps
+And make sure you have already installed [R](http://www.r-project.org/).
 
 
+## Usage
 
-## Outputs
+```
+# In most cases
+biotcm cspn --gene-list DEGs.txt
 
-1. Pathway Interaction Network
-	e.g. ./result/pathway_interaction_network.txt
-	format: pathway1_name	pathway2_name	p_value
-
-2. Pathway Pairs involved in each related active PPI
-	e.g. ./result/aPPIs_2_pathway_pairs.txt
-	format: gene1_Entrez_ID gene2_Entrez_ID pathway_pairs_list
-
-## FAQs
-
-Q: How to use a specific PPI network?
-
-A: 
-
-Q: How to provide new concerned pathway list or GO term list?
-
-A: 
-
-Q: How to provide new files of gene sets corresponding to pathways or GO terms?
-
-A:
+# Get helps in a terminal
+biotcm cspn -h
+```
 
 ## Reference
 

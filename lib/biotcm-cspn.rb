@@ -1,24 +1,18 @@
 require 'biotcm'
 require 'optparse'
 
-# CSPN: A method to build pathway interaction network.
-#
-# == Reference
-# Yezhou Huang and Shao Li, “Detection of characteristic sub pathway 
-# network for angio-genesis based on the comprehensive pathway network”, 
-# BMC Bioinformatics, Volume 11 Supplement 1, 2010: Selected articles 
-# from the Eighth Asia-Pacific Bioinformatics Conference, Bangalore, 
-# India, January 2010 (APBC 2010).
-#
+# CSPN
 class BioTCM::Apps::CSPN < BioTCM::Apps::App
   include BioTCM::Modules::WorkingDir
 
   # Version
   VERSION = "0.0.1"
   # Permutation times
-  PERMUTATION = 1
+  PERMUTATION = 100
   # Exchange times
   EXCHANGE = 100000
+  # Alpha level
+  ALPHA = 0.05
 
   # Set wd
   def initialize
@@ -34,7 +28,8 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
     options = {
       mode:'or',
       ppi:path_to('ref/ppi/combined.txt'),
-      pathway_list:path_to('ref/pathway/default.txt'),
+      pathway_list:path_to('ref/pathway/all.txt'),
+      # TODO: pathway_list:path_to('ref/pathway/default.txt'),
     }
     OptionParser.new do |opts|
       opts.banner = "Usage: biotcm cspn [OPTIONS]"
@@ -104,25 +99,25 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
 
     # Hash to store counts
     pathway_pair = {}
-    pathways.product(pathways) do |pair|
-      next if pair[0] == pair[1]
-      next if pathway_pair[pair.reverse]
-      pathway_pair[pair] = []
+    pathways.product(pathways) do |p_p|
+      next if p_p[0] == p_p[1]
+      next if pathway_pair[p_p.reverse]
+      pathway_pair[p_p] = []
     end
 
     # Real counts
-    pathway_pair.each_key do |pair|
+    pathway_pair.each_key do |p_p|
       count = 0
-      pathway[pair[0]].product(pathway[pair[1]]).each do |pair|
-        count += 1 if active_ppi[pair.join(' ')] || active_ppi[pair.reverse.join(' ')]
+      pathway[p_p[0]].product(pathway[p_p[1]]).each do |p_g|
+        count += 1 if active_ppi[p_g.join(' ')] || active_ppi[p_g.reverse.join(' ')]
       end
-      pathway_pair[pair]<<count
+      pathway_pair[p_p]<<count
     end
     File.open('cspn/temp/pathways_0.txt', 'w').puts pathways.collect { |w| [w, pathway[w]].join("\t") }
     File.open('cspn/temp/counts_0.txt', 'w').puts pathway_pair.to_a.collect { |a| a.join("\t") }
 
     # Permutation
-    _pathway = pathway
+    _pathway = pathway # Stash
     PERMUTATION.times do |permutation_time|
       BioTCM.logger.info('CSPN') { "Permutation #{permutation_time + 1}" }
       pathway = {}
@@ -139,31 +134,59 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
         pathway[p1][s1], pathway[p2][s2] = pathway[p2][s2], pathway[p1][s1]
       end
 
-      pathway_pair.each_key do |pair|
+      pathway_pair.each_key do |p_p|
         count = 0
-        pathway[pair[0]].product(pathway[pair[1]]).each do |pair|
-          count += 1 if active_ppi[pair.join(' ')] || active_ppi[pair.reverse.join(' ')]
+        pathway[p_p[0]].product(pathway[p_p[1]]).each do |p_g|
+          count += 1 if active_ppi[p_g.join(' ')] || active_ppi[p_g.reverse.join(' ')]
         end
-        pathway_pair[pair]<<count
+        pathway_pair[p_p]<<count
       end
       File.open("cspn/temp/pathways_#{permutation_time + 1}.txt", 'w').puts pathway.to_a.collect { |a| a.join("\t") }
       File.open("cspn/temp/counts_#{permutation_time + 1}.txt", 'w') do |fout|
         pathway_pair.each { |k, v| fout.puts [k, v.last].join("\t") }
       end
     end
+    pathway = _pathway # Pop
     
-    # Calculate empirical pvalues
+    # Calculate empirical p-values
     BioTCM.logger.info('CSPN') { 'Calculating empirical p-values' }
     pathway_pair.each do |k, v|
       pathway_pair[k] = 1 - (v.sort.index(v[0]) + (v.count(v[0])-1.0) /2) / (PERMUTATION + 1)
     end
-    File.open('cspn/result/p-values.txt', 'w').puts pathway_pair.to_a.collect { |a| a.join("\t") }
+    File.open('cspn/temp/p-values.txt', 'w').puts pathway_pair.to_a.collect { |a| a.join("\t") }
 
-    `Rscript #{path_to 'lib/adjust_p_value.r'}`    
+    # Adjust p-values
+    `Rscript #{path_to 'lib/biotcm-cspn/adjust_p_value.r'}`    
 
     ###
     # Output results
     #
 
+    # Pathway-pathway interaction
+    ppis_pathway = File.open('cspn/temp/adj.p-values.txt').collect do |line|
+      col = line.chomp.split("\t")
+    end.select { |a| a[2].to_f < ALPHA }
+
+    File.open('cspn/result/pathway_pathway_interactions.txt', 'w') do |fout|
+      fout.puts ppis_pathway.collect { |a| a.join("\t") }
+    end
+
+    # Active PPIs
+    ppis_gene = {}
+    ppis_pathway.each do |p_p|
+      str_p_p = p_p[0..1].join('-')
+      pathway[p_p[0]].product(pathway[p_p[1]]).each do |p_g|
+        if active_ppi[p_g.join(' ')]
+          ppis_gene[p_g.join(' ')] ? ppis_gene[p_g.join(' ')]<<str_p_p : ppis_gene[p_g.join(' ')] = [str_p_p]
+        elsif active_ppi[p_g.reverse.join(' ')]
+          ppis_gene[p_g.reverse.join(' ')] ? ppis_gene[p_g.reverse.join(' ')]<<str_p_p : ppis_gene[p_g.reverse.join(' ')] = [str_p_p]
+        end
+      end
+    end
+    File.open('cspn/result/active_ppi_involved.txt', 'w') do |fout|
+      ppis_gene.keys.sort_by { |k| -ppis_gene[k].size }.each do |p_g|
+        fout.puts p_g.split(' ').push(ppis_gene[p_g].join(', ')).join("\t")
+      end
+    end
   end
 end
