@@ -155,7 +155,8 @@ class BioTCM::Apps::CSPN < BioTCM::Apps::App
     File.open('cspn/temp/p-values.txt', 'w').puts pathway_pair.to_a.collect { |a| a.join("\t") }
 
     # Adjust p-values
-    `Rscript #{path_to 'lib/biotcm-cspn/adjust_p_value.r'}`    
+    `Rscript #{path_to 'lib/biotcm-cspn/adjust_p_value.r'}`
+    sleep(3) # Make sure the file has already be flushed
 
     ###
     # Output results
