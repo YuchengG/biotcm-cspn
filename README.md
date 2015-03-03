@@ -1,5 +1,4 @@
-biotcm-cspn
-===========
+# CSPN
 
 A method to build pathway interaction network.
 
@@ -22,6 +21,7 @@ biotcm cspn --gene-list DEGs.txt
 # Get helps in a terminal
 biotcm cspn -h
 ```
+
 
 ## Citation
 
