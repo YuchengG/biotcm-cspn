@@ -23,10 +23,6 @@ biotcm cspn --gene-list DEGs.txt
 biotcm cspn -h
 ```
 
-## Reference
+## Citation
 
-Yezhou Huang and Shao Li, “Detection of characteristic sub pathway 
-network for angio-genesis based on the comprehensive pathway network”, 
-BMC Bioinformatics, Volume 11 Supplement 1, 2010: Selected articles 
-from the Eighth Asia-Pacific Bioinformatics Conference, Bangalore, 
-India, January 2010 (APBC 2010).
+Huang, Y. and Li, S. (2010) Detection of characteristic sub pathway network for angiogenesis based on the comprehensive pathway network, BMC Bioinformatics, 11, S32.
